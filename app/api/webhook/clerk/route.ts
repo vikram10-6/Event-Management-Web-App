@@ -1,49 +1,48 @@
 import { Webhook } from 'svix';
-import { Request } from 'express';
+import { NextRequest } from 'next/server';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { createUser, deleteUser, updateUser } from '@/lib/actions/user.actions';
 import { clerkClient } from '@clerk/nextjs';
 import { NextResponse } from 'next/server';
 
-export async function POST(req: Request) {
- 
+export async function POST(req: NextRequest) {
   // You can find this in the Clerk Dashboard -> Webhooks -> choose the webhook
   const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
- 
+
   if (!WEBHOOK_SECRET) {
     throw new Error('Please add WEBHOOK_SECRET from Clerk Dashboard to .env or .env.local');
   }
- 
+
   // Get the headers
-  const svix_id = typeof req.headers['svix-id'] === 'string' ? req.headers['svix-id'] : '';
-  const svix_timestamp = typeof req.headers['svix-timestamp'] === 'string' ? req.headers['svix-timestamp'] : '';
-  const svix_signature = typeof req.headers['svix-signature'] === 'string' ? req.headers['svix-signature'] : '';
- 
+  const svix_id = typeof req.headers.get('svix-id') === 'string' ? req.headers.get('svix-id') : '';
+  const svix_timestamp = typeof req.headers.get('svix-timestamp') === 'string' ? req.headers.get('svix-timestamp') : '';
+  const svix_signature = typeof req.headers.get('svix-signature') === 'string' ? req.headers.get('svix-signature') : '';
+
   // If there are no headers, error out
   if (!svix_id || !svix_timestamp || !svix_signature) {
     return new Response('Error occurred -- no svix headers', {
       status: 400
     });
   }
- 
+
   // Get the body
   let payload;
   try {
-    payload = JSON.parse(req.body);
+    payload = await req.json();
   } catch (error) {
     console.error('Error parsing request body:', error);
     return new Response('Error parsing request body', {
       status: 400
     });
   }
- 
+
   const body = JSON.stringify(payload);
- 
+
   // Create a new Svix instance with your secret.
   const wh = new Webhook(WEBHOOK_SECRET);
- 
+
   let evt: WebhookEvent;
- 
+
   // Verify the payload with the headers
   try {
     evt = wh.verify(body, {
@@ -57,11 +56,11 @@ export async function POST(req: Request) {
       status: 400
     });
   }
- 
+
   // Get the ID and type
   const { id } = evt.data;
   const eventType = evt.type;
- 
+
   if(eventType === 'user.created') {
     const { id, email_addresses, image_url, first_name, last_name, username } = evt.data;
 
@@ -109,6 +108,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ message: 'OK', user: deletedUser });
   }
- 
+
   return new Response('', { status: 200 });
 }
