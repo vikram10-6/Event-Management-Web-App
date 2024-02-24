@@ -1,8 +1,8 @@
-import { error } from 'console'
 import mongoose from 'mongoose'
-import { Chakra_Petch } from 'next/font/google'
 
+console.log("sas")
 const MONGODB_URI= process.env.MONGODB_URI
+console.log(MONGODB_URI,"mb")
 
 let cached = (global as any).mongoose || { conn: null, promise: null }
 
